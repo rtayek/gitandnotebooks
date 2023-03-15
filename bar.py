@@ -77,4 +77,13 @@ def main():
     print("plot")
     plt.show()
 
+def moving_average_forecast(series, window_size):
+    """Forecasts the mean of the last few values.
+        If window_size=1, then this is equivalent to naive forecast"""
+    forecast = []
+    for time in range(len(series) - window_size):
+        forecast.append(series[time:time + window_size].mean())
+    np_forecast = np.asarray(forecast)
+    return np_forecast
+    
 if __name__ == "__main__": main()
