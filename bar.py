@@ -1,27 +1,21 @@
 import numpy as np
 import matplotlib.pyplot as plt
-def trend(time, slope=0):
-    """A trend over time"""
-    return slope * time
+def trend(time, slope=0): return slope * time
 
 def seasonal_pattern(season_time):
-    """Just an arbitrary pattern"""
     return np.where(season_time < 0.1,
                     np.cos(season_time * 7 * np.pi),
                     1 / np.exp(5 * season_time))
 
 def seasonality(time, period, amplitude=1, phase=0):
-    """Repeats the same pattern at each period"""
     season_time = ((time + phase) % period) / period
     return amplitude * seasonal_pattern(season_time)
 
 def noise(time, noise_level=1, seed=None):
-    """Adds noise to the series"""
     rnd = np.random.RandomState(seed)
     return rnd.randn(len(time)) * noise_level
 
 def plot_series(time, series, format="-", title="", label=None, start=0, end=None):
-    """Plot the series"""
     plt.plot(time[start:end], series[start:end], format, label=label)
     plt.xlabel("Time")
     plt.ylabel("Value")
@@ -29,18 +23,19 @@ def plot_series(time, series, format="-", title="", label=None, start=0, end=Non
     if label:
         plt.legend()
     plt.grid(True)
-def baz():
-    print("baz")
-def generateTimeSeriesData():
-    years=4
-    TIME = np.arange(years * 365 + 1, dtype="float32")
+
+def plot_series2(time, series, format="-", start=0, end=None):
+    plt.plot(time[start:end], series[start:end], format)
+    plt.xlabel("Time")
+    plt.ylabel("Value")
+    plt.grid(False)
+
+def generateTimeSeriesData(years=4,slope=.01,amplitude=40,period=365,noise_level=2,seed=42):
+    TIME = np.arange(years * period + 1, dtype="float32")
     y_intercept = 10
-    slope = 0.01
     SERIES = trend(TIME, slope) + y_intercept
-    amplitude = 40
-    SERIES += seasonality(TIME, period=365, amplitude=amplitude)
-    noise_level = 2
-    SERIES += noise(TIME, noise_level, seed=42)
+    SERIES += seasonality(TIME, period, amplitude=amplitude)
+    SERIES += noise(TIME, noise_level, seed)
     return TIME,SERIES
 
 def train_val_split(time, series, time_step):
@@ -85,5 +80,5 @@ def moving_average_forecast(series, window_size):
         forecast.append(series[time:time + window_size].mean())
     np_forecast = np.asarray(forecast)
     return np_forecast
-    
+
 if __name__ == "__main__": main()
