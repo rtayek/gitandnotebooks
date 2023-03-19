@@ -4,6 +4,44 @@ import tensorflow as tf
 from tensorflow import keras as K
 print(tf.__version__)
 
+# copy from week 1 notebook
+
+
+def trend(time, slope=0):
+    """A trend over time"""
+    return slope * time
+
+
+def seasonal_pattern(season_time):
+    """Just an arbitrary pattern"""
+    return np.where(season_time < 0.1,
+                    np.cos(season_time * 7 * np.pi),
+                    1 / np.exp(5 * season_time))
+
+
+def seasonality(time, period, amplitude=1, phase=0):
+    """Repeats the same pattern at each period"""
+    season_time = ((time + phase) % period) / period
+    return amplitude * seasonal_pattern(season_time)
+
+
+def noise(time, noise_level=1, seed=None):
+    """Adds noise to the series"""
+    rnd = np.random.RandomState(seed)
+    return rnd.randn(len(time)) * noise_level
+
+def week1():
+    TIME = np.arange(4 * 365 + 1, dtype="float32")
+    y_intercept = 10
+    slope = 0.01
+    SERIES = trend(TIME, slope) + y_intercept
+    amplitude = 40
+    SERIES += seasonality(TIME, period=365, amplitude=amplitude)
+    # Adding some noise
+    noise_level = 2
+    SERIES += noise(TIME, noise_level, seed=42)
+    return TIME, SERIES
+
 
 class S():  # class for series
 
@@ -47,10 +85,12 @@ class S():  # class for series
         return rnd.randn(len(time)) * noise_level   
 
     def generateTimeSeriesDataForWeek1(self, years=4, slope=.01, amplitude=40, period=365, noise_level=2, seed=42):
-        TIME = np.arange(years * period + 1, dtype="float32")
+        print("i am here")
+        TIME = np.arange(years * 365 + 1, dtype="float32")
+        
         y_intercept = 10
-        SERIES = self.trend(TIME, slope) + y_intercept
-        SERIES += self.seasonality(TIME, period, amplitude=amplitude)
+        SERIES = self.trend(TIME, slope=slope) + y_intercept
+        SERIES += self.seasonality(TIME, period=period, amplitude=amplitude)
         SERIES += self.noise(TIME, noise_level, seed)
         return TIME, SERIES
 
@@ -65,6 +105,7 @@ class S():  # class for series
         series += self.noise(time, noise_level, seed=51)
         return time, series
     
+    # week 1
     def generateTimeSeriesData(self, years=4, slope=.01, amplitude=40, period=365, noise_level=2, seed=42):
         TIME = np.arange(years * period + 1, dtype="float32")
         y_intercept = 10
@@ -74,17 +115,23 @@ class S():  # class for series
         return TIME, SERIES
 
     def split(self, val, test=None):
-        if test is not None: test = len(self.time)
-        t = self.time[:val]
-        s = self.series[:val]
-        tV = self.time[val:test]
+        if test is  None: test = len(self.series)
+        t = self.time[0:val]
+        s = self.series[0:val]
+        tV = self.time[val:test]                                                                
         sV = self.series[val:test]
-        tT = self.time[test:]
-        sT = self.series[test:]
-        return t, s, tV, sV, tT, sT
+        tT = self.time[test: len(self.series)]
+        sT = self.series[test: len(self.series)]
+        print(test)
+        return S(t, s), S(tV, sV), S(tT, sT)
+
+    def compute_metrics(self,other):
+        mse = K.metrics.mean_squared_error(self.series, other.series).numpy()
+        mae = K.metrics.mean_absolute_error(self.series,other.series).numpy()
+        return mse, mae
         
     @staticmethod
-    def compute_metrics(true_series, forecast):
+    def static_compute_metrics(clazz,true_series, forecast):
         mse = K.metrics.mean_squared_error(true_series, forecast).numpy()
         mae = K.metrics.mean_absolute_error(true_series, forecast).numpy()
         return mse, mae
@@ -106,9 +153,9 @@ class S():  # class for series
         plt.title(title)
         if label:
             plt.legend()
-        plt.grid(True)
+        plt.grid(False)  # was True
 
-    def plot0(self,title=""):
+    def plot0(self, title=""):
         plt.figure(figsize=(10, 6))
         self.plot_series(title=title)
         plt.show()   
@@ -127,9 +174,9 @@ class S():  # class for series
         return dataset
 
     def checkWeek1Series(self, n=5):
-        print("all:",self.time,self.series)
-        print("time: "+str(self.time[:n]),str(self.time[-n:]))
-        print("series: "+str(self.series[:n]),str(self.series[-n:]))
+        print("all:", self.time, self.series)
+        print("time: " + str(self.time[:n]), str(self.time[-n:]))
+        print("series: " + str(self.series[:n]), str(self.series[-n:]))
         exTStart = [0., 1., 2., 3., 4.] 
         exTStart = np.array(exTStart, dtype=np.float32)
         exTEnd = [1456., 1457., 1458., 1459., 1460.]
@@ -191,9 +238,15 @@ def testWindoedSDataset():
 def testComputeMetrics():
     zeros = np.zeros(5)
     ones = np.ones(5)
-    mse, mae = S.compute_metrics(zeros, ones)
+    s=S(None,zeros)
+    other=S(None,ones)
+    
+    
+#    mse, mae = S.compute_metrics(zeros, ones)
+    mse, mae = s.compute_metrics(other)
     print(f"mse: {mse}, mae: {mae} for series of zeros and prediction of ones\n")
-    mse, mae = S.compute_metrics(ones, ones)
+#    mse, mae = S.compute_metrics(ones, ones)
+    mse, mae = other.compute_metrics(other)
     print(f"mse: {mse}, mae: {mae} for series of ones and prediction of ones\n")
     print(f"metrics are numpy numeric types: {np.issubdtype(type(mse), np.number)}")
 
@@ -206,6 +259,7 @@ def moving_average_forecast(series, window_size):
         forecast.append(series[time:time + window_size].mean())
     np_forecast = np.asarray(forecast)
     return np_forecast
+
 
 def main():
     print('main')
